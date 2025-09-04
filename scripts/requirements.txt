@@ -1,0 +1,4 @@
+qdrant-client==1.6.9
+numpy==1.24.3
+python-dotenv==1.0.0
+docker==6.1.3
