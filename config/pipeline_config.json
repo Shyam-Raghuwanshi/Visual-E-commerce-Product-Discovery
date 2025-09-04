@@ -1,0 +1,19 @@
+{
+  "vector_generation": {
+    "batch_size": 8,
+    "max_concurrent_downloads": 5,
+    "text_weight": 0.7,
+    "image_weight": 0.3,
+    "cache_dir": "data/image_cache",
+    "output_dir": "data/vectors"
+  },
+  "qdrant": {
+    "host": "localhost",
+    "port": 6333,
+    "collection_name": "products"
+  },
+  "clip": {
+    "model_name": "openai/clip-vit-base-patch32",
+    "device": "auto"
+  }
+}

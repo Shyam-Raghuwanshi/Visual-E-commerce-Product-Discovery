@@ -1,0 +1,53 @@
+{
+  "total_products": 1200,
+  "categories": {
+    "accessories": 387,
+    "clothing": 374,
+    "shoes": 439
+  },
+  "brands": {
+    "Michael Kors": 29,
+    "Levi's": 35,
+    "Coach": 25,
+    "Converse": 38,
+    "Kate Spade": 33,
+    "Gap": 26,
+    "Urban Outfitters": 29,
+    "Louis Vuitton": 40,
+    "Vans": 37,
+    "Fossil": 26,
+    "Rolex": 36,
+    "Timberland": 42,
+    "Tommy Hilfiger": 35,
+    "Forever 21": 28,
+    "New Balance": 44,
+    "Puma": 44,
+    "Ray-Ban": 35,
+    "Steve Madden": 44,
+    "Uniqlo": 38,
+    "Adidas": 62,
+    "Reebok": 43,
+    "Jimmy Choo": 32,
+    "Gucci": 39,
+    "Oakley": 31,
+    "Zara": 33,
+    "Casio": 25,
+    "Nike": 65,
+    "Calvin Klein": 32,
+    "Prada": 28,
+    "Clarks": 20,
+    "Tory Burch": 40,
+    "Ralph Lauren": 26,
+    "Dr. Martens": 30,
+    "H&M": 30
+  },
+  "price_range": {
+    "min": 10.24,
+    "max": 1467.03,
+    "average": 272.72289166666667
+  },
+  "availability": {
+    "available": 915,
+    "unavailable": 285
+  }
+}

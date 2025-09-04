@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import search, upload, health
+from app.routes import search, upload, health, advanced_search
 import uvicorn
 
 app = FastAPI(
     title="Visual E-commerce Product Discovery API",
-    description="Multi-modal search API for e-commerce products using images and text",
-    version="1.0.0"
+    description="Multi-modal search API for e-commerce products using images and text with advanced indexing and optimization",
+    version="2.0.0"
 )
 
 # CORS middleware
@@ -22,6 +22,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(upload.router, prefix="/api", tags=["upload"])
 app.include_router(search.router, prefix="/api", tags=["search"])
+app.include_router(advanced_search.router, prefix="/api", tags=["advanced-search"])
 
 @app.get("/")
 async def root():
