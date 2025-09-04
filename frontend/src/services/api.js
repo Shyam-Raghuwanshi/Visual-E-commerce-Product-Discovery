@@ -42,6 +42,56 @@ export const healthCheck = async () => {
   }
 };
 
+// Advanced search with filters
+export const advancedSearch = async (searchParams) => {
+  try {
+    const { mode, query, image, filters } = searchParams;
+    
+    // Build the request based on search mode
+    let endpoint = '/search/advanced';
+    let requestData;
+    let config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (mode === 'image' || (mode === 'hybrid' && image)) {
+      // For image or hybrid search, use FormData
+      const formData = new FormData();
+      
+      if (image) {
+        formData.append('file', image);
+      }
+      
+      if (query && (mode === 'text' || mode === 'hybrid')) {
+        formData.append('query', query);
+      }
+      
+      // Add filters as JSON string
+      formData.append('filters', JSON.stringify(filters));
+      formData.append('mode', mode);
+      
+      requestData = formData;
+      config.headers['Content-Type'] = 'multipart/form-data';
+      
+    } else {
+      // For text-only search, use JSON
+      requestData = {
+        query,
+        filters,
+        mode
+      };
+    }
+
+    const response = await api.post(endpoint, requestData, config);
+    return response.data;
+    
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || 'Advanced search failed');
+  }
+};
+
 // Text search
 export const searchByText = async (query, category = '', limit = 20, offset = 0) => {
   try {

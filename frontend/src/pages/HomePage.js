@@ -1,64 +1,32 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Search, Sparkles } from 'lucide-react';
-import ImageUpload from '../components/ImageUpload';
-import SearchBar from '../components/SearchBar';
-import { searchByImage, searchByText } from '../services/api';
-import toast from 'react-hot-toast';
+import MainSearchInterface from '../components/MainSearchInterface';
+import useSearch from '../hooks/useSearch';
 
 const HomePage = () => {
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
+  const { performSearch, isLoading } = useSearch();
 
-  const categories = [
-    'electronics', 'clothing', 'home', 'sports', 'books', 'beauty', 'automotive'
-  ];
-
-  const handleTextSearch = async () => {
-    if (!query.trim()) {
-      toast.error('Please enter a search query');
-      return;
-    }
-
-    setIsSearching(true);
+  const handleSearch = async (searchParams) => {
     try {
-      const results = await searchByText(query, category);
+      const results = await performSearch(searchParams);
+      
+      // Navigate to search results with all parameters
       navigate('/search', { 
         state: { 
           results, 
-          searchType: 'text', 
-          query,
-          category 
+          searchParams,
+          searchType: searchParams.mode,
+          query: searchParams.query,
+          uploadedImage: searchParams.image ? URL.createObjectURL(searchParams.image) : null,
+          filters: searchParams.filters
         } 
       });
+      
     } catch (error) {
-      toast.error('Search failed. Please try again.');
+      // Error handling is done in the hook
       console.error('Search error:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleImageUpload = async (file) => {
-    setIsUploading(true);
-    try {
-      const results = await searchByImage(file, category);
-      navigate('/search', { 
-        state: { 
-          results, 
-          searchType: 'image', 
-          uploadedImage: URL.createObjectURL(file),
-          category 
-        } 
-      });
-    } catch (error) {
-      toast.error('Image search failed. Please try again.');
-      console.error('Image search error:', error);
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -86,54 +54,12 @@ const HomePage = () => {
           </p>
         </div>
 
-        {/* Search Interface */}
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Text Search */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="flex items-center mb-6">
-              <Search className="h-6 w-6 text-blue-600 mr-3" />
-              <h2 className="text-2xl font-semibold text-gray-900">
-                Search by Text
-              </h2>
-            </div>
-            
-            <SearchBar
-              query={query}
-              setQuery={setQuery}
-              onSearch={handleTextSearch}
-              category={category}
-              setCategory={setCategory}
-              categories={categories}
-              isLoading={isSearching}
-            />
-          </div>
-
-          {/* Divider */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-6 bg-gray-50 text-gray-500 font-medium">
-                OR
-              </span>
-            </div>
-          </div>
-
-          {/* Image Search */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="flex items-center mb-6">
-              <Camera className="h-6 w-6 text-purple-600 mr-3" />
-              <h2 className="text-2xl font-semibold text-gray-900">
-                Search by Image
-              </h2>
-            </div>
-            
-            <ImageUpload 
-              onImageUpload={handleImageUpload}
-              isUploading={isUploading}
-            />
-          </div>
+        {/* Main Search Interface */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-16">
+          <MainSearchInterface 
+            onSearch={handleSearch}
+            isLoading={isLoading}
+          />
         </div>
 
         {/* Features Section */}
