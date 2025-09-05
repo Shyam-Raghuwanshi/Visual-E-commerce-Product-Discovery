@@ -217,6 +217,26 @@ app.include_router(upload.router, prefix="/api", tags=["upload"])
 app.include_router(search.router, prefix="/api", tags=["search"])
 app.include_router(advanced_search.router, prefix="/api", tags=["advanced-search"])
 
+# Import and include multi-modal search router
+try:
+    from app.routes import multimodal_search
+    app.include_router(multimodal_search.router, tags=["multi-modal-search"])
+    logger.info("Multi-modal search routes registered successfully")
+except ImportError as e:
+    logger.warning(f"Multi-modal search routes not available: {e}")
+except Exception as e:
+    logger.error(f"Failed to register multi-modal search routes: {e}")
+
+# Import and include demo scenarios router
+try:
+    from app.routes import demo_scenarios
+    app.include_router(demo_scenarios.router, prefix="/api/demo", tags=["demo-scenarios"])
+    logger.info("Demo scenarios routes registered successfully")
+except ImportError as e:
+    logger.warning(f"Demo scenarios routes not available: {e}")
+except Exception as e:
+    logger.error(f"Failed to register demo scenarios routes: {e}")
+
 @app.get("/")
 async def root():
     """Enhanced root endpoint with comprehensive API information"""
@@ -244,7 +264,18 @@ async def root():
             "search_filters": "/api/search/filters",
             "advanced_search": "/api/search/advanced",
             "product_details": "/api/products/{id}",
-            "upload": "/api/upload"
+            "upload": "/api/upload",
+            "multimodal_search": {
+                "color_variations": "/api/v1/multimodal/color-variations",
+                "cheaper_alternatives": "/api/v1/multimodal/cheaper-alternatives",
+                "accessory_matching": "/api/v1/multimodal/accessory-matching",
+                "seasonal_recommendations": "/api/v1/multimodal/seasonal-recommendations",
+                "style_evolution": "/api/v1/multimodal/style-evolution",
+                "outfit_suggestions": "/api/v1/multimodal/outfit-suggestions/{product_id}",
+                "trending_now": "/api/v1/multimodal/trending-now",
+                "style_inspiration": "/api/v1/multimodal/style-inspiration/{style}",
+                "health": "/api/v1/multimodal/health"
+            }
         },
         "authentication": {
             "api_key_header": "X-API-Key",
