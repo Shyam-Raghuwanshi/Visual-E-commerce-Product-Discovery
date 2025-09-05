@@ -17,10 +17,7 @@ from enum import Enum
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, PointStruct, Filter, FieldCondition, 
-    MatchValue, Range, PayloadIndexParams, CreateIndex, DeleteIndex,
-    SearchRequest, QueryRequest, RecommendRequest, ScrollRequest,
-    UpdateStatus, CollectionInfo, OptimizersConfig, HnswConfig,
-    WalConfig, QuantizationConfig, ScalarQuantization, SearchParams
+    MatchValue, Range, SearchParams
 )
 
 from app.services.clip_service import CLIPService
@@ -625,111 +622,189 @@ class OptimizedSearchService:
     
     async def search_with_filters(
         self,
-        search_filter: SearchFilter,
-        ranking_config: Optional[RankingConfig] = None,
-        limit: int = 20,
-        offset: int = 0
-    ) -> SearchResponse:
+        request: "FilterRequest"
+    ) -> Dict[str, Any]:
         """
-        Perform filtered search without vector similarity.
-        Useful for browsing by categories, price ranges, etc.
-        """
-        search_id = f"filtered_{int(time.time() * 1000)}"
-        start_time = time.time()
+        Advanced filtering with vector search and multiple filter combinations.
         
+        Args:
+            request: Filter request with all search parameters
+            
+        Returns:
+            Dictionary with search results and aggregations
+            
+        Raises:
+            ValueError: If request is invalid
+            RuntimeError: If search fails
+        """
         try:
-            logger.info("Performing filtered search")
+            logger.info(f"Advanced filter search: {request.text_query[:50] if request.text_query else 'No text query'}")
             
-            # Build filter
-            qdrant_filter = self._build_search_filter(search_filter)
+            start_time = time.time()
             
-            if not qdrant_filter:
-                raise ValueError("At least one filter criterion must be specified")
-            
-            # Use scroll for filtered search (more efficient for large result sets)
-            scroll_result = self.client.scroll(
-                collection_name=self.collection_name,
-                scroll_filter=qdrant_filter,
-                limit=min(limit + offset, self.max_limit),
-                offset=None,  # Start from beginning
-                with_payload=True,
-                with_vectors=False
+            # Convert FilterRequest to SearchFilter
+            search_filter = SearchFilter(
+                categories=request.categories,
+                brands=request.brands,
+                min_price=request.min_price,
+                max_price=request.max_price,
+                price_ranges=request.price_ranges,
+                min_rating=request.min_rating,
+                max_rating=request.max_rating,
+                in_stock=request.in_stock,
+                tags=request.tags
             )
             
-            results = scroll_result[0]  # Points
+            # Create ranking config
+            ranking_config = RankingConfig()
+            if request.sort_by:
+                # Adjust ranking factors based on sort preference
+                if request.sort_by.value == "price_asc" or request.sort_by.value == "price_desc":
+                    ranking_config.price_preference = "low" if request.sort_by.value == "price_asc" else "high"
+                    ranking_config.factors[RankingFactor.PRICE] = 0.3
+                    ranking_config.factors[RankingFactor.SIMILARITY] = 0.2
+                elif request.sort_by.value == "rating":
+                    # Boost products with higher ratings
+                    ranking_config.factors[RankingFactor.POPULARITY] = 0.4
+                    ranking_config.factors[RankingFactor.SIMILARITY] = 0.2
             
-            # Apply ranking if configured
-            if ranking_config:
-                scored_results = []
-                for result in results:
-                    # Use neutral similarity for filtered search
-                    ranking_score = self._calculate_ranking_score(
-                        result.payload, 0.5, ranking_config
-                    )
-                    scored_results.append((result, ranking_score))
-                
-                # Sort by ranking score
-                scored_results.sort(key=lambda x: x[1], reverse=True)
-                
-                # Apply pagination
-                paginated_results = scored_results[offset:offset + limit]
-                final_results = [result for result, score in paginated_results]
+            # Perform search
+            if request.text_query:
+                # Use hybrid search with text
+                response = await self.hybrid_search(
+                    text_query=request.text_query,
+                    search_filter=search_filter,
+                    ranking_config=ranking_config,
+                    limit=request.limit,
+                    offset=request.offset
+                )
             else:
-                # Apply pagination without ranking
-                final_results = results[offset:offset + limit]
+                # Use filtered search only
+                response = await self.search_with_filters(
+                    search_filter=search_filter,
+                    ranking_config=ranking_config,
+                    limit=request.limit,
+                    offset=request.offset
+                )
             
-            # Convert to Product objects
-            products = []
-            for result in final_results:
-                try:
-                    payload = result.payload
-                    product = Product(
-                        id=payload.get("id", str(result.id)),
-                        name=payload.get("name", "Unknown Product"),
-                        description=payload.get("description", ""),
-                        price=payload.get("price", 0.0),
-                        category=payload.get("category", "uncategorized"),
-                        brand=payload.get("brand"),
-                        image_url=payload.get("image_url", ""),
-                        created_at=payload.get("created_at", "2024-01-01T00:00:00"),
-                        updated_at=payload.get("updated_at", "2024-01-01T00:00:00")
-                    )
-                    
-                    products.append(product)
-                    
-                except Exception as e:
-                    logger.warning(f"Failed to parse product result: {e}")
-                    continue
+            # Generate aggregations
+            aggregations = await self._generate_aggregations(response.products, request)
             
-            total_time = time.time() - start_time
+            query_time = time.time() - start_time
+            logger.info(f"Advanced filter search completed in {query_time:.3f} seconds, found {len(response.products)} products")
             
-            # Log analytics
-            metrics = SearchMetrics(
-                search_id=search_id,
-                search_type=SearchType.FILTERED,
-                query=None,
-                filters_applied=search_filter.__dict__,
-                results_count=len(products),
-                search_time=total_time,
-                encoding_time=0,
-                vector_search_time=total_time,
-                ranking_time=0,
-                timestamp=datetime.now()
-            )
-            self.analytics.log_search(metrics)
-            
-            logger.info(f"Filtered search completed in {total_time:.3f}s, found {len(products)} products")
-            
-            return SearchResponse(
-                products=products,
-                total=len(results),
-                query_time=total_time,
-                similarity_scores=None
-            )
+            return {
+                "products": [product.__dict__ for product in response.products],
+                "total": response.total,
+                "query_time": query_time,
+                "filters_applied": self._get_applied_filters_summary(request),
+                "aggregations": aggregations
+            }
             
         except Exception as e:
-            logger.error(f"Filtered search failed: {e}")
-            raise RuntimeError(f"Filtered search failed: {str(e)}")
+            logger.error(f"Advanced filter search failed: {e}")
+            raise RuntimeError(f"Search failed: {str(e)}")
+    
+    async def _generate_aggregations(
+        self, 
+        products: List["Product"], 
+        request: "FilterRequest"
+    ) -> Dict[str, Any]:
+        """Generate aggregations from search results"""
+        try:
+            aggregations = {}
+            
+            # Category aggregation
+            categories = {}
+            brands = {}
+            price_ranges = {"0-25": 0, "25-50": 0, "50-100": 0, "100-200": 0, "200+": 0}
+            rating_ranges = {"1-2": 0, "2-3": 0, "3-4": 0, "4-5": 0}
+            
+            for product in products:
+                # Category counts
+                if hasattr(product, 'category'):
+                    category = product.category or "Unknown"
+                    categories[category] = categories.get(category, 0) + 1
+                
+                # Brand counts
+                if hasattr(product, 'brand'):
+                    brand = product.brand or "Unknown"
+                    brands[brand] = brands.get(brand, 0) + 1
+                
+                # Price range counts
+                if hasattr(product, 'price'):
+                    price = product.price or 0
+                    if price < 25:
+                        price_ranges["0-25"] += 1
+                    elif price < 50:
+                        price_ranges["25-50"] += 1
+                    elif price < 100:
+                        price_ranges["50-100"] += 1
+                    elif price < 200:
+                        price_ranges["100-200"] += 1
+                    else:
+                        price_ranges["200+"] += 1
+                
+                # Rating range counts
+                if hasattr(product, 'rating') and product.rating:
+                    rating = product.rating
+                    if rating >= 4:
+                        rating_ranges["4-5"] += 1
+                    elif rating >= 3:
+                        rating_ranges["3-4"] += 1
+                    elif rating >= 2:
+                        rating_ranges["2-3"] += 1
+                    else:
+                        rating_ranges["1-2"] += 1
+            
+            # Sort and limit aggregations
+            aggregations["categories"] = dict(sorted(categories.items(), key=lambda x: x[1], reverse=True)[:10])
+            aggregations["brands"] = dict(sorted(brands.items(), key=lambda x: x[1], reverse=True)[:10])
+            aggregations["price_ranges"] = price_ranges
+            aggregations["rating_ranges"] = rating_ranges
+            
+            # Price statistics
+            prices = [product.price for product in products if hasattr(product, 'price') and product.price is not None]
+            if prices:
+                aggregations["price_stats"] = {
+                    "min": min(prices),
+                    "max": max(prices),
+                    "avg": sum(prices) / len(prices)
+                }
+            
+            return aggregations
+            
+        except Exception as e:
+            logger.warning(f"Aggregation generation failed: {e}")
+            return {}
+    
+    def _get_applied_filters_summary(self, request: "FilterRequest") -> Dict[str, Any]:
+        """Get summary of applied filters"""
+        applied = {}
+        
+        if request.text_query:
+            applied["text_query"] = request.text_query
+        if request.categories:
+            applied["categories"] = request.categories
+        if request.brands:
+            applied["brands"] = request.brands
+        if request.min_price is not None:
+            applied["min_price"] = request.min_price
+        if request.max_price is not None:
+            applied["max_price"] = request.max_price
+        if request.min_rating is not None:
+            applied["min_rating"] = request.min_rating
+        if request.max_rating is not None:
+            applied["max_rating"] = request.max_rating
+        if request.in_stock is not None:
+            applied["in_stock"] = request.in_stock
+        if request.tags:
+            applied["tags"] = request.tags
+        
+        applied["sort_by"] = request.sort_by.value
+        applied["include_out_of_stock"] = request.include_out_of_stock
+        
+        return applied
     
     async def get_search_analytics(self, hours: int = 24) -> Dict[str, Any]:
         """Get comprehensive search analytics and performance metrics"""

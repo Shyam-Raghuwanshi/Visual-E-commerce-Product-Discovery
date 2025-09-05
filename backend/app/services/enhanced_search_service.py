@@ -126,38 +126,33 @@ class EnhancedSearchService:
     
     async def search_by_image(
         self,
-        image_data: bytes,
-        category: Optional[str] = None,
-        limit: int = 20,
-        offset: int = 0,
-        min_similarity: float = 0.1
-    ) -> SearchResponse:
+        file: "UploadFile",
+        request: "ImageSearchRequest"
+    ) -> Dict[str, Any]:
         """
-        Search for products using image with enhanced features.
+        Search for products using an uploaded image file.
         
         Args:
-            image_data: Raw image bytes
-            category: Optional category filter
-            limit: Maximum number of results
-            offset: Pagination offset
-            min_similarity: Minimum similarity threshold
+            file: Uploaded image file
+            request: Image search request parameters
             
         Returns:
-            SearchResponse with matching products
+            Dictionary with search results
             
         Raises:
             ValueError: If image is invalid
             RuntimeError: If search fails
         """
         try:
-            if not image_data:
-                raise ValueError("Image data cannot be empty")
-            
-            logger.info(f"Searching by image (category: {category})")
+            logger.info(f"Searching by image: {file.filename} (category: {request.category})")
             
             start_time = asyncio.get_event_loop().time()
             
-            # Process image
+            # Read and process image
+            image_data = await file.read()
+            if not image_data:
+                raise ValueError("Image file is empty")
+            
             try:
                 image = Image.open(io.BytesIO(image_data))
                 if image.mode != 'RGB':
@@ -175,28 +170,31 @@ class EnhancedSearchService:
             search_results = await self.vector_service.search_similar(
                 query_vector=image_embedding,
                 collection_name="products",
-                limit=limit + offset,
-                score_threshold=min_similarity,
-                filter_conditions={"category": category} if category else None
+                limit=request.limit + request.offset,
+                score_threshold=request.similarity_threshold,
+                filter_conditions={"category": request.category} if request.category else None
             )
             
             # Apply pagination
-            paginated_results = search_results[offset:offset + limit]
+            paginated_results = search_results[request.offset:request.offset + request.limit]
             
             # Convert to Product objects
             products = []
+            similarity_scores = []
             for result in paginated_results:
                 try:
-                    product = Product(
-                        id=result.get("id"),
-                        name=result.get("name", ""),
-                        description=result.get("description", ""),
-                        category=result.get("category", ""),
-                        price=result.get("price", 0.0),
-                        image_url=result.get("image_url", ""),
-                        similarity_score=result.get("score", 0.0)
-                    )
-                    products.append(product)
+                    product_data = {
+                        "id": result.get("id"),
+                        "name": result.get("name", ""),
+                        "description": result.get("description", ""),
+                        "category": result.get("category", ""),
+                        "price": result.get("price", 0.0),
+                        "image_url": result.get("image_url", ""),
+                        "created_at": result.get("created_at", "2024-01-01T00:00:00"),
+                        "updated_at": result.get("updated_at", "2024-01-01T00:00:00"),
+                    }
+                    products.append(product_data)
+                    similarity_scores.append(result.get("score", 0.0))
                 except Exception as e:
                     logger.warning(f"Failed to parse product result: {e}")
                     continue
@@ -204,14 +202,12 @@ class EnhancedSearchService:
             total_time = asyncio.get_event_loop().time() - start_time
             logger.info(f"Image search completed in {total_time:.3f} seconds, found {len(products)} products")
             
-            return SearchResponse(
-                query="<image_search>",
-                products=products,
-                total_count=len(search_results),
-                limit=limit,
-                offset=offset,
-                search_time=total_time
-            )
+            return {
+                "products": products,
+                "total": len(search_results),
+                "similarity_scores": similarity_scores,
+                "query_time": total_time
+            }
             
         except ValueError:
             raise
@@ -221,53 +217,36 @@ class EnhancedSearchService:
     
     async def search_combined(
         self,
-        query: str,
-        image_data: Optional[bytes] = None,
-        category: Optional[str] = None,
-        limit: int = 20,
-        offset: int = 0,
-        text_weight: float = 0.6,
-        image_weight: float = 0.4,
-        min_similarity: float = 0.1
-    ) -> SearchResponse:
+        file: "UploadFile",
+        request: "CombinedSearchRequest"
+    ) -> Dict[str, Any]:
         """
         Search using both text and image with weighted combination.
         
         Args:
-            query: Text search query
-            image_data: Optional image bytes
-            category: Optional category filter
-            limit: Maximum number of results
-            offset: Pagination offset
-            text_weight: Weight for text similarity (0-1)
-            image_weight: Weight for image similarity (0-1)
-            min_similarity: Minimum similarity threshold
+            file: Uploaded image file
+            request: Combined search request parameters
             
         Returns:
-            SearchResponse with matching products
+            Dictionary with search results
             
         Raises:
             ValueError: If inputs are invalid
             RuntimeError: If search fails
         """
         try:
-            if not query or not query.strip():
+            if not request.query or not request.query.strip():
                 raise ValueError("Text query is required for combined search")
             
-            if text_weight + image_weight != 1.0:
-                # Normalize weights
-                total_weight = text_weight + image_weight
-                text_weight = text_weight / total_weight
-                image_weight = image_weight / total_weight
-            
-            logger.info(f"Combined search: '{query}' with image={image_data is not None}")
+            logger.info(f"Combined search: '{request.query}' with image={file.filename}")
             
             start_time = asyncio.get_event_loop().time()
             
             # Encode text (always required)
-            text_embedding = await self.clip_service.encode_text(query.strip())
+            text_embedding = await self.clip_service.encode_text(request.query.strip())
             
-            # Encode image if provided
+            # Encode image
+            image_data = await file.read()
             image_embedding = None
             if image_data:
                 try:
@@ -283,8 +262,8 @@ class EnhancedSearchService:
             # Create combined embedding
             if image_embedding is not None:
                 # Weighted combination of text and image embeddings
-                combined_embedding = (text_weight * text_embedding + 
-                                    image_weight * image_embedding)
+                combined_embedding = (request.text_weight * text_embedding + 
+                                    request.image_weight * image_embedding)
                 # Normalize the combined embedding
                 combined_embedding = combined_embedding / np.linalg.norm(combined_embedding)
             else:
@@ -299,28 +278,31 @@ class EnhancedSearchService:
             search_results = await self.vector_service.search_similar(
                 query_vector=combined_embedding,
                 collection_name="products",
-                limit=limit + offset,
-                score_threshold=min_similarity,
-                filter_conditions={"category": category} if category else None
+                limit=request.limit + request.offset,
+                score_threshold=0.1,  # Use default threshold for combined search
+                filter_conditions={"category": request.category} if request.category else None
             )
             
             # Apply pagination
-            paginated_results = search_results[offset:offset + limit]
+            paginated_results = search_results[request.offset:request.offset + request.limit]
             
             # Convert to Product objects
             products = []
+            similarity_scores = []
             for result in paginated_results:
                 try:
-                    product = Product(
-                        id=result.get("id"),
-                        name=result.get("name", ""),
-                        description=result.get("description", ""),
-                        category=result.get("category", ""),
-                        price=result.get("price", 0.0),
-                        image_url=result.get("image_url", ""),
-                        similarity_score=result.get("score", 0.0)
-                    )
-                    products.append(product)
+                    product_data = {
+                        "id": result.get("id"),
+                        "name": result.get("name", ""),
+                        "description": result.get("description", ""),
+                        "category": result.get("category", ""),
+                        "price": result.get("price", 0.0),
+                        "image_url": result.get("image_url", ""),
+                        "created_at": result.get("created_at", "2024-01-01T00:00:00"),
+                        "updated_at": result.get("updated_at", "2024-01-01T00:00:00"),
+                    }
+                    products.append(product_data)
+                    similarity_scores.append(result.get("score", 0.0))
                 except Exception as e:
                     logger.warning(f"Failed to parse product result: {e}")
                     continue
@@ -328,14 +310,12 @@ class EnhancedSearchService:
             total_time = asyncio.get_event_loop().time() - start_time
             logger.info(f"Combined search completed in {total_time:.3f} seconds, found {len(products)} products")
             
-            return SearchResponse(
-                query=f"{query} [combined]",
-                products=products,
-                total_count=len(search_results),
-                limit=limit,
-                offset=offset,
-                search_time=total_time
-            )
+            return {
+                "products": products,
+                "total": len(search_results),
+                "similarity_scores": similarity_scores,
+                "query_time": total_time
+            }
             
         except ValueError:
             raise

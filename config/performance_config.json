@@ -1,0 +1,190 @@
+{
+  "performance_config": {
+    "version": "2.1.0",
+    "cache": {
+      "redis_url": "redis://localhost:6379",
+      "default_ttl": 3600,
+      "max_memory_items": 10000,
+      "ttl_config": {
+        "search": 1800,
+        "embed": 7200,
+        "product": 3600,
+        "user": 1800,
+        "rec": 900
+      }
+    },
+    "database": {
+      "connection_pool": {
+        "min_size": 5,
+        "max_size": 20,
+        "command_timeout": 30,
+        "pool_timeout": 30,
+        "pool_recycle": 3600
+      },
+      "query_optimization": {
+        "enable_prepared_statements": true,
+        "batch_size": 100,
+        "connection_retry_attempts": 3
+      }
+    },
+    "compression": {
+      "enabled": true,
+      "min_size": 500,
+      "compression_level": 6,
+      "brotli_quality": 4,
+      "compressible_types": [
+        "application/json",
+        "application/javascript",
+        "text/html",
+        "text/css",
+        "text/plain",
+        "text/xml",
+        "application/xml",
+        "image/svg+xml"
+      ]
+    },
+    "async_processing": {
+      "max_workers": 10,
+      "thread_pool_size": 4,
+      "process_pool_size": 2,
+      "task_queue_size": 10000,
+      "task_timeout": 300,
+      "batch_processing": {
+        "default_batch_size": 10,
+        "max_batch_size": 100,
+        "batch_timeout": 600
+      }
+    },
+    "image_processing": {
+      "cache_dir": "data/image_cache",
+      "thumbnail_sizes": {
+        "small": [150, 150],
+        "medium": [300, 300],
+        "large": [600, 600]
+      },
+      "optimization": {
+        "jpeg_quality": 85,
+        "webp_quality": 90,
+        "png_compression": 6,
+        "max_image_size": [2048, 2048]
+      },
+      "batch_processing": {
+        "max_concurrent": 5,
+        "memory_limit_mb": 512
+      }
+    },
+    "monitoring": {
+      "prometheus_enabled": true,
+      "metrics_history_size": 10000,
+      "alert_rules": [
+        {
+          "name": "High Response Time",
+          "metric": "http_request_duration",
+          "condition": "gt",
+          "threshold": 2.0,
+          "duration_seconds": 300,
+          "severity": "warning"
+        },
+        {
+          "name": "Low Cache Hit Rate",
+          "metric": "cache_hit_rate",
+          "condition": "lt",
+          "threshold": 0.7,
+          "duration_seconds": 300,
+          "severity": "warning"
+        },
+        {
+          "name": "High Error Rate",
+          "metric": "error_rate",
+          "condition": "gt",
+          "threshold": 0.05,
+          "duration_seconds": 300,
+          "severity": "error"
+        },
+        {
+          "name": "High Memory Usage",
+          "metric": "memory_usage_percent",
+          "condition": "gt",
+          "threshold": 85.0,
+          "duration_seconds": 600,
+          "severity": "warning"
+        }
+      ]
+    },
+    "rate_limiting": {
+      "enabled": true,
+      "redis_backend": true,
+      "limits": {
+        "search": {
+          "requests": 100,
+          "window": 3600
+        },
+        "upload": {
+          "requests": 50,
+          "window": 3600
+        },
+        "product": {
+          "requests": 200,
+          "window": 3600
+        },
+        "default": {
+          "requests": 1000,
+          "window": 3600
+        }
+      }
+    },
+    "security": {
+      "cors": {
+        "max_age": 3600,
+        "allow_credentials": true,
+        "expose_headers": ["X-Process-Time", "X-API-Version"]
+      },
+      "headers": {
+        "x_frame_options": "DENY",
+        "x_content_type_options": "nosniff",
+        "x_xss_protection": "1; mode=block"
+      }
+    },
+    "logging": {
+      "level": "INFO",
+      "json_format": true,
+      "structured_logging": true,
+      "performance_logging": true,
+      "log_rotation": {
+        "max_file_size": "100MB",
+        "backup_count": 10
+      }
+    },
+    "optimization_features": {
+      "enable_query_caching": true,
+      "enable_result_compression": true,
+      "enable_request_batching": true,
+      "enable_connection_pooling": true,
+      "enable_memory_optimization": true,
+      "enable_cpu_optimization": true,
+      "enable_io_optimization": true
+    },
+    "performance_targets": {
+      "api_response_time_p95": 500,
+      "cache_hit_rate_target": 0.8,
+      "error_rate_target": 0.01,
+      "throughput_target_rps": 1000,
+      "memory_usage_target": 0.7,
+      "cpu_usage_target": 0.7
+    },
+    "scaling": {
+      "auto_scaling": {
+        "enabled": false,
+        "min_instances": 2,
+        "max_instances": 10,
+        "target_cpu_utilization": 70,
+        "target_memory_utilization": 80
+      },
+      "load_balancing": {
+        "strategy": "round_robin",
+        "health_check_interval": 30,
+        "unhealthy_threshold": 3
+      }
+    }
+  }
+}
