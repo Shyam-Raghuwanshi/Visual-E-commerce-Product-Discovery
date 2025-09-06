@@ -45,7 +45,10 @@ class CLIPService:
     """
     
     def __init__(self, model_name: str = "openai/clip-vit-base-patch32", 
-                 batch_size: int = 32, max_workers: int = 4):
+                 batch_size: int = 32, max_workers: int = 4,
+                 gpu_memory_threshold: float = 4.0, enable_caching: bool = True,
+                 log_level: str = "INFO", fallback_to_cpu: bool = True,
+                 **kwargs):
         """
         Initialize CLIP service with enhanced features.
         
@@ -53,10 +56,18 @@ class CLIPService:
             model_name: CLIP model identifier
             batch_size: Maximum batch size for processing
             max_workers: Maximum number of worker threads
+            gpu_memory_threshold: Minimum GPU memory in GB for CUDA usage
+            enable_caching: Enable model caching
+            log_level: Logging level
+            fallback_to_cpu: Whether to fallback to CPU on GPU errors
+            **kwargs: Additional configuration parameters (ignored)
         """
         self.model_name = model_name
         self.batch_size = batch_size
         self.max_workers = max_workers
+        self.gpu_memory_threshold = gpu_memory_threshold
+        self.enable_caching = enable_caching
+        self.fallback_to_cpu = fallback_to_cpu
         self.cache = CLIPModelCache()
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         
@@ -74,7 +85,7 @@ class CLIPService:
             gpu_memory = torch.cuda.get_device_properties(0).total_memory
             gpu_memory_gb = gpu_memory / (1024**3)
             
-            if gpu_memory_gb >= 4:  # Minimum 4GB for CLIP
+            if gpu_memory_gb >= self.gpu_memory_threshold:
                 return "cuda"
             else:
                 logger.warning(f"GPU memory ({gpu_memory_gb:.1f}GB) insufficient for CLIP. Using CPU.")
@@ -415,12 +426,36 @@ class CLIPService:
             "model_loaded": self.cache.model is not None
         }
     
-    def cleanup(self):
-        """Clean up resources"""
+    async def cleanup(self):
+        """Clean up resources asynchronously"""
         try:
-            if self.cache.model is not None:
+            if hasattr(self, 'cache') and self.cache.model is not None:
                 del self.cache.model
                 del self.cache.processor
+                self.cache.model = None
+                self.cache.processor = None
+                
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            gc.collect()
+            
+            if hasattr(self, 'executor'):
+                self.executor.shutdown(wait=True)
+                
+            logger.info("CLIP service cleanup completed")
+            
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+    
+    def cleanup_sync(self):
+        """Synchronous cleanup for destructor"""
+        try:
+            if hasattr(self, 'cache') and self.cache.model is not None:
+                del self.cache.model
+                del self.cache.processor
+                self.cache.model = None
+                self.cache.processor = None
                 
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -437,4 +472,4 @@ class CLIPService:
     
     def __del__(self):
         """Destructor to ensure cleanup"""
-        self.cleanup()
+        self.cleanup_sync()

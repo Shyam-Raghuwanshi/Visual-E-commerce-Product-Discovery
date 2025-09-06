@@ -800,6 +800,30 @@ async def get_categories():
             }
         )
 
+@router.get("/products/categories", response_model=Dict[str, List[str]])
+async def get_product_categories():
+    """Get all available product categories and brands (alternative endpoint for frontend compatibility)"""
+    try:
+        categories = await search_service.get_categories()
+        brands = await search_service.get_brands()
+        
+        return {
+            "categories": categories,
+            "brands": brands,
+            "total_categories": len(categories),
+            "total_brands": len(brands)
+        }
+        
+    except Exception as e:
+        logger.error(f"Product categories error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "internal_server_error",
+                "message": "An error occurred while retrieving product categories"
+            }
+        )
+
 # Helper functions for advanced search integration
 
 async def _extract_user_context(request: Request, current_user: Dict) -> Optional[Dict[str, Any]]:

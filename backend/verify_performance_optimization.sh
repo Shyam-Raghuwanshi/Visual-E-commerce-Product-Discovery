@@ -59,7 +59,7 @@ check_redis() {
 
 # Function to test API endpoints
 test_endpoints() {
-    local base_url="http://localhost:8000"
+    local base_url="http://localhost:8001"
     
     print_status "INFO" "Testing API endpoints..."
     
@@ -153,7 +153,7 @@ run_performance_tests() {
     # Simple response time test
     if command -v curl &> /dev/null; then
         start_time=$(date +%s%N)
-        curl -s -o /dev/null "http://localhost:8000/api/health"
+        curl -s -o /dev/null "http://localhost:8001/api/health"
         end_time=$(date +%s%N)
         duration=$(( (end_time - start_time) / 1000000 ))
         
@@ -237,12 +237,12 @@ show_next_steps() {
     echo "   ./setup_performance_optimization.sh"
     echo ""
     echo "2. 📊 Monitor performance:"
-    echo "   curl http://localhost:8000/api/metrics"
-    echo "   curl http://localhost:8000/api/performance"
+    echo "   curl http://localhost:8001/api/metrics"
+    echo "   curl http://localhost:8001/api/performance"
     echo ""
     echo "3. 🧪 Run load tests:"
     echo "   pip install locust"
-    echo "   locust -f tests/load_test.py --host=http://localhost:8000"
+    echo "   locust -f tests/load_test.py --host=http://localhost:8001"
     echo ""
     echo "4. 📈 View monitoring dashboard:"
     echo "   # Set up Grafana/Prometheus for advanced monitoring"
@@ -266,7 +266,7 @@ main() {
     echo ""
     
     # Check if server is running
-    if check_service "FastAPI" "8000"; then
+    if check_service "FastAPI" "8001"; then
         echo ""
         test_endpoints
         echo ""

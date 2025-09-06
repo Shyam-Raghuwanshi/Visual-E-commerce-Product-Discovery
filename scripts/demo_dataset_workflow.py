@@ -193,7 +193,7 @@ def demonstrate_workflow():
     print("   python test_clip_service.py")
     print("")
     print("4. Test search functionality:")
-    print("   curl -X POST 'http://localhost:8000/search/text' \\")
+    print("   curl -X POST 'http://localhost:8001/search/text' \\")
     print("        -H 'Content-Type: application/json' \\")
     print("        -d '{\"query\": \"blue t-shirt\", \"limit\": 10}'")
     

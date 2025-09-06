@@ -118,12 +118,12 @@ echo "⏳ Waiting for backend to initialize..."
 sleep 10
 
 # Check if backend is running
-if ! curl -s http://localhost:8000/api/health > /dev/null; then
+if ! curl -s http://localhost:8001/api/health > /dev/null; then
     echo "❌ Backend failed to start"
     exit 1
 fi
 
-echo "✅ Backend running on http://localhost:8000"
+echo "✅ Backend running on http://localhost:8001"
 
 # Start frontend
 echo "🎨 Starting frontend server..."
@@ -147,8 +147,8 @@ fi
 echo ""
 echo "🎉 Demo is ready!"
 echo "📱 Frontend: http://localhost:3000"
-echo "🔌 Backend API: http://localhost:8000"
-echo "📚 API Docs: http://localhost:8000/docs"
+echo "🔌 Backend API: http://localhost:8001"
+echo "📚 API Docs: http://localhost:8001/docs"
 echo ""
 echo "🎯 Demo Scenarios Available:"
 echo "• Celebrity Outfit Recreation"

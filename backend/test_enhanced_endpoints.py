@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Test configuration
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8001"
 API_KEYS = {
     "basic": "basic_api_key_123",
     "premium": "premium_api_key_456",

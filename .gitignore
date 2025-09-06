@@ -3,7 +3,7 @@
 .env.local
 .env.development
 .env.production
-
+qdrant_storage/
 # Python
 __pycache__/
 *.py[cod]

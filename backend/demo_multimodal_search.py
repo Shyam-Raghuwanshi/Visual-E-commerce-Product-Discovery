@@ -33,7 +33,7 @@ except ImportError as e:
 class MultiModalSearchDemo:
     """Demo class for multi-modal search features"""
     
-    def __init__(self, api_base_url: str = "http://localhost:8000", use_direct_service: bool = False):
+    def __init__(self, api_base_url: str = "http://localhost:8001", use_direct_service: bool = False):
         self.api_base_url = api_base_url
         self.use_direct_service = use_direct_service
         
@@ -456,7 +456,7 @@ class MultiModalSearchDemo:
 async def main():
     """Main demo function"""
     parser = argparse.ArgumentParser(description="Multi-Modal Search Enhancement Demo")
-    parser.add_argument("--api-url", default="http://localhost:8000", help="API base URL")
+    parser.add_argument("--api-url", default="http://localhost:8001", help="API base URL")
     parser.add_argument("--direct", action="store_true", help="Use direct service calls instead of HTTP API")
     parser.add_argument("--demo", choices=['color', 'cheaper', 'accessory', 'seasonal', 'style', 'all'], 
                        default='all', help="Which demo to run")

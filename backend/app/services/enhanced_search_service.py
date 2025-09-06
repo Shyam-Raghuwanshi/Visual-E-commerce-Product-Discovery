@@ -566,7 +566,7 @@ class EnhancedSearchService:
     async def cleanup(self):
         """Clean up service resources"""
         try:
-            self.clip_service.cleanup()
+            await self.clip_service.cleanup()
             if hasattr(self, 'executor'):
                 self.executor.shutdown(wait=True)
             logger.info("Enhanced Search Service cleanup completed")
@@ -576,6 +576,8 @@ class EnhancedSearchService:
     def __del__(self):
         """Destructor to ensure cleanup"""
         try:
-            asyncio.create_task(self.cleanup())
+            self.clip_service.cleanup_sync()
+            if hasattr(self, 'executor'):
+                self.executor.shutdown(wait=True)
         except Exception:
             pass  # Ignore errors during destruction

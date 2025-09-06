@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class SearchOptimizationDemo:
     """Demo class to showcase all search optimization features"""
     
-    def __init__(self, base_url: str = "http://localhost:8000/api"):
+    def __init__(self, base_url: str = "http://localhost:8001/api"):
         self.base_url = base_url
         self.session = requests.Session()
         
@@ -419,7 +419,7 @@ def main():
         
         print("\n🎉 All features demonstrated successfully!")
         print("\nNext steps:")
-        print("1. Explore the API documentation at http://localhost:8000/docs")
+        print("1. Explore the API documentation at http://localhost:8001/docs")
         print("2. Try the advanced search endpoints with different parameters")
         print("3. Monitor performance with the analytics endpoint")
         print("4. Optimize the collection periodically for best performance")

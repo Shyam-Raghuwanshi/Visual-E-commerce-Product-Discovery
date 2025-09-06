@@ -141,7 +141,7 @@ class AdvancedSearchDemo:
                 "rating": 4.3,
                 "review_count": 95,
                 "popularity_score": 0.65,
-                "view_count": 8000,
+                "view_count": 8001,
                 "purchase_count": 120,
                 "conversion_rate": 0.18,
                 "add_to_cart_rate": 0.22,

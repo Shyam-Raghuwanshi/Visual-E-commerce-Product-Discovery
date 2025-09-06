@@ -387,7 +387,7 @@ if __name__ == "__main__":
     # Enhanced server configuration
     config = {
         "host": "0.0.0.0",
-        "port": int(os.getenv("PORT", 8000)),
+        "port": int(os.getenv("PORT", 8001)),
         "reload": os.getenv("ENVIRONMENT", "development") == "development",
         "log_level": os.getenv("LOG_LEVEL", "info").lower(),
         "workers": int(os.getenv("WORKERS", 1)),

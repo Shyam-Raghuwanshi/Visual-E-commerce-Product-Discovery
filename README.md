@@ -77,7 +77,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-The backend will be available at `http://localhost:8000`
+The backend will be available at `http://localhost:8001`
 
 ### 5. Frontend Setup
 ```bash
@@ -139,7 +139,7 @@ Visual-E-commerce-Product-Discovery/
 
 ### Text Search
 ```bash
-curl -X POST "http://localhost:8000/api/search/text" \
+curl -X POST "http://localhost:8001/api/search/text" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "red running shoes",
@@ -150,7 +150,7 @@ curl -X POST "http://localhost:8000/api/search/text" \
 
 ### Image Search
 ```bash
-curl -X POST "http://localhost:8000/api/search/image" \
+curl -X POST "http://localhost:8001/api/search/image" \
   -F "file=@product_image.jpg" \
   -F "category=electronics"
 ```
@@ -167,7 +167,7 @@ pip install <package-name>
 pip freeze > requirements.txt
 
 # Run with auto-reload
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 ### Frontend Development
@@ -190,7 +190,7 @@ npm run build
 ```bash
 cd backend
 pip install gunicorn
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8001
 ```
 
 ### Production Frontend

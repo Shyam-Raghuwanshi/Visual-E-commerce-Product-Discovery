@@ -80,7 +80,7 @@ async def test_api_endpoints():
     try:
         import requests
         
-        base_url = "http://localhost:8000"
+        base_url = "http://localhost:8001"
         
         # Test health endpoint
         response = requests.get(f"{base_url}/api/health", timeout=5)
