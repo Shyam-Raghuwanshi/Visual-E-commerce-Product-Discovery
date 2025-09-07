@@ -814,4 +814,4 @@ if __name__ == "__main__":
     }
     
     logger.info(f"Starting server with config: {config}")
-    uvicorn.run("main:app", **config)
+    uvicorn.run("main_working:app", **config)

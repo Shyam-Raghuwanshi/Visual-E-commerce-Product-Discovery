@@ -36,9 +36,6 @@ const HomePage = () => {
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <Sparkles className="h-12 w-12 text-blue-600" />
-            </div>
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
