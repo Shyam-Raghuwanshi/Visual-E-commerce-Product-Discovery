@@ -350,6 +350,7 @@ async def root():
             "categories": "/api/categories",
             "products": "/api/products",
             "search_text": "/api/search/text",
+            "search_image": "/api/search/image",
             "search_visual": "/api/search/visual", 
             "search_multimodal": "/api/search/multimodal",
             "search_advanced": "/api/search/advanced"
@@ -561,20 +562,60 @@ async def search_visual(request: VisualSearchRequest):
     if category_filter:
         all_products = [p for p in all_products if p["category"].lower() == category_filter.lower()]
     
-    # Simulate visual similarity matching (in real implementation, this would use image AI)
-    # For demo, we'll return products with high ratings as "visually similar"
+    # Simulate visual similarity matching based on image content
     visual_results = []
     
-    for product in all_products:
-        # Simulate visual similarity score based on product attributes
-        visual_score = 0.6 + (product.get('rating', 4.0) - 4.0) * 0.2  # Higher rated products get higher visual scores
+    # Try to determine category from image URL or default to footwear for demo
+    predicted_category = "footwear"  # Default for visual search demo
+    
+    # Simple image URL analysis (in real implementation, this would use AI image analysis)
+    if request.image_url:
+        image_url = request.image_url.lower()
+        # More comprehensive footwear detection
+        if any(keyword in image_url for keyword in ["shoe", "shoes", "boot", "boots", "sneaker", "sneakers", "sandal", "sandals", "footwear", "nike", "adidas", "converse", "running-shoes", "athletic", "foot"]):
+            predicted_category = "footwear"
+        elif any(keyword in image_url for keyword in ["phone", "iphone", "samsung", "laptop", "macbook", "electronic", "smartphone", "computer"]):
+            predicted_category = "electronics"
+        elif any(keyword in image_url for keyword in ["dress", "jacket", "shirt", "clothing", "fashion", "apparel", "wear"]):
+            predicted_category = "clothing"
+        elif any(keyword in image_url for keyword in ["bag", "handbag", "watch", "glasses", "sunglasses", "accessory", "accessories"]):
+            predicted_category = "accessories"
+    
+    # If no category filter specified, use the predicted category as filter
+    if not category_filter:
+        # Only show products from the predicted category for more accurate results
+        filtered_products = [p for p in all_products if p["category"].lower() == predicted_category.lower()]
         
-        if product['category'] == 'footwear':
-            visual_score += 0.1  # Boost footwear for visual search demo
-        
-        product_copy = product.copy()
-        product_copy['score'] = min(visual_score, 1.0)
-        visual_results.append(product_copy)
+        # Process only products from the detected category
+        for product in filtered_products:
+            # Higher base score for matching category
+            visual_score = 0.7 + (product.get('rating', 4.0) - 4.0) * 0.2
+            
+            # Extra boost for specific product types within category
+            if predicted_category == "footwear":
+                if any(keyword in product['name'].lower() for keyword in ["nike", "adidas", "sneaker", "running"]):
+                    visual_score += 0.15
+                elif any(keyword in product['name'].lower() for keyword in ["boot", "hiking"]):
+                    visual_score += 0.12
+                elif any(keyword in product['name'].lower() for keyword in ["converse", "chuck"]):
+                    visual_score += 0.10
+            
+            product_copy = product.copy()
+            product_copy['score'] = min(visual_score, 1.0)
+            visual_results.append(product_copy)
+    else:
+        # If category filter is specified, use it
+        for product in all_products:
+            # Simulate visual similarity score based on product attributes
+            visual_score = 0.6 + (product.get('rating', 4.0) - 4.0) * 0.2
+            
+            # Boost if it matches the predicted category
+            if product['category'].lower() == predicted_category.lower():
+                visual_score += 0.2
+            
+            product_copy = product.copy()
+            product_copy['score'] = min(visual_score, 1.0)
+            visual_results.append(product_copy)
     
     # Sort by visual similarity score
     visual_results.sort(key=lambda x: x['score'], reverse=True)
@@ -587,11 +628,91 @@ async def search_visual(request: VisualSearchRequest):
         "similarity_scores": [product.get('score', 0.0) for product in results],
         "total": len(visual_results),
         "search_type": "visual",
+        "predicted_category": predicted_category,
         "category_filter": category_filter,
         "image_url": request.image_url,
         "query_time": 0.28,
         "processing_time": 0.28
     }
+
+@app.post("/api/search/image")
+async def search_image_post(
+    request: Request,
+    limit: Optional[int] = 10,
+    offset: Optional[int] = 0,
+    category: Optional[str] = None
+):
+    """Image search endpoint that handles both JSON body and query parameters"""
+    visual_request = None
+    
+    try:
+        # Try to get the request body
+        body = await request.body()
+        if body:
+            # Try to parse as JSON
+            try:
+                json_body = json.loads(body.decode())
+                visual_request = VisualSearchRequest(**json_body)
+            except (json.JSONDecodeError, ValueError):
+                # If JSON parsing fails, fall back to query parameters
+                visual_request = None
+    except:
+        # If body reading fails, visual_request remains None
+        pass
+    
+    # If no valid JSON body, use query parameters
+    if visual_request is None:
+        visual_request = VisualSearchRequest(
+            image_url=None,
+            image_data=None,
+            limit=limit,
+            category=category
+        )
+    
+    # Call the visual search function
+    result = await search_visual(visual_request)
+    
+    # Apply offset if specified
+    if offset > 0 and offset < len(result["products"]):
+        products = result["products"][offset:]
+        similarity_scores = result["similarity_scores"][offset:]
+        result["products"] = products
+        result["similarity_scores"] = similarity_scores
+    
+    # Add offset info to response
+    result["offset"] = offset
+    
+    return result
+
+@app.get("/api/search/image")
+async def search_image_get(
+    limit: Optional[int] = 10,
+    offset: Optional[int] = 0,
+    category: Optional[str] = None
+):
+    """Image search endpoint with GET method for query parameters"""
+    # Create a mock request for visual search
+    mock_request = VisualSearchRequest(
+        image_url=None,
+        image_data=None,
+        limit=limit,
+        category=category
+    )
+    
+    # Call the visual search function
+    result = await search_visual(mock_request)
+    
+    # Apply offset if specified
+    if offset > 0:
+        products = result["products"][offset:]
+        similarity_scores = result["similarity_scores"][offset:]
+        result["products"] = products
+        result["similarity_scores"] = similarity_scores
+    
+    # Add offset info to response
+    result["offset"] = offset
+    
+    return result
 
 @app.post("/api/search/multimodal")
 async def search_multimodal(request: MultimodalSearchRequest):
