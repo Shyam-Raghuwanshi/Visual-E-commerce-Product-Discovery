@@ -112,14 +112,8 @@ cd Visual-E-commerce-Product-Discovery
 ```
 
 ```bash
-# 2. Environment Setup
-cp .env.template .env
-# Edit .env file with your configurations
-```
-
-```bash
 # 3. Start Vector Database
-cd docker && docker-compose up -d qdrant && cd ..
+docker run -d -p 6333:6333 qdrant/qdrant
 ```
 
 ```bash
