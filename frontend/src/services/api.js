@@ -46,7 +46,7 @@ export const healthCheck = async () => {
 export const advancedSearch = async (searchParams) => {
   try {
     const { mode, query, image, filters } = searchParams;
-    
+
     // Build the request based on search mode
     let endpoint = '/search/advanced';
     let requestData;
@@ -56,25 +56,25 @@ export const advancedSearch = async (searchParams) => {
       },
     };
 
-    if (mode === 'image' || (mode === 'hybrid' && image)) {
+    if (mode === 'image') {
       // For image or hybrid search, use FormData
       const formData = new FormData();
-      
+
       if (image) {
         formData.append('file', image);
       }
-      
+
       if (query && (mode === 'text' || mode === 'hybrid')) {
         formData.append('query', query);
       }
-      
+
       // Add filters as JSON string
       formData.append('filters', JSON.stringify(filters));
       formData.append('mode', mode);
-      
+
       requestData = formData;
       config.headers['Content-Type'] = 'multipart/form-data';
-      
+
     } else {
       // For text-only search, use JSON
       requestData = {
@@ -86,7 +86,7 @@ export const advancedSearch = async (searchParams) => {
 
     const response = await api.post(endpoint, requestData, config);
     return response.data;
-    
+
   } catch (error) {
     throw new Error(error.response?.data?.detail || 'Advanced search failed');
   }
@@ -112,13 +112,13 @@ export const searchByImage = async (imageFile, category = '', limit = 20, offset
   try {
     const formData = new FormData();
     formData.append('file', imageFile);
-    
+
     // Add other parameters as query params since this is a file upload
     const params = new URLSearchParams();
     if (category) params.append('category', category);
     params.append('limit', limit.toString());
     params.append('offset', offset.toString());
-    
+
     const response = await api.post(`/search/image?${params.toString()}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -139,7 +139,7 @@ export const searchCombined = async (query, imageFile, category = '', limit = 20
     if (category) formData.append('category', category);
     formData.append('limit', limit.toString());
     formData.append('offset', offset.toString());
-    
+
     const response = await api.post('/search/combined', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -176,7 +176,7 @@ export const uploadImage = async (imageFile) => {
   try {
     const formData = new FormData();
     formData.append('file', imageFile);
-    
+
     const response = await api.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

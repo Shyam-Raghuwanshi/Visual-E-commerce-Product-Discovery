@@ -214,7 +214,6 @@ const SearchResults = () => {
                   `}>
                     {searchType === 'text' && '🔤 Text Search'}
                     {searchType === 'image' && '📷 Image Search'}
-                    {searchType === 'hybrid' && '🔄 Hybrid Search'}
                   </span>
                   
                   {searchType === 'text' && query && (

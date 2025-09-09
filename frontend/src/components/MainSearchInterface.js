@@ -174,10 +174,7 @@ const MainSearchInterface = ({
       return;
     }
 
-    if (searchMode === SEARCH_MODES.HYBRID && !hasTextQuery && !hasImage) {
-      toast.error('Please provide both text query and image for hybrid search');
-      return;
-    }
+    
 
     // Build search parameters
     const searchParams = {
@@ -265,17 +262,6 @@ const MainSearchInterface = ({
           >
             <Camera className="w-4 h-4 mr-2" />
             Image Search
-          </button>
-          <button
-            onClick={() => handleModeChange(SEARCH_MODES.HYBRID)}
-            className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              searchMode === SEARCH_MODES.HYBRID
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Combine className="w-4 h-4 mr-2" />
-            Hybrid Search
           </button>
         </div>
       </div>
